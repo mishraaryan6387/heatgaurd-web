@@ -9,11 +9,32 @@ Output: a clean hourly pandas DataFrame
 This module knows nothing about WBGT, ML models, or heatwave logic.
 """
 
+import os
+import threading
+import time
+
 import requests
 import pandas as pd
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
-OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+# Optional commercial key. Free-tier hosts (e.g. Render) share outbound IPs,
+# so the free Open-Meteo endpoint often answers 429; a key avoids that.
+OPEN_METEO_API_KEY = os.environ.get("OPEN_METEO_API_KEY", "").strip()
+
+OPEN_METEO_URL = (
+    "https://customer-api.open-meteo.com/v1/forecast"
+    if OPEN_METEO_API_KEY
+    else "https://api.open-meteo.com/v1/forecast"
+)
+
+# Open-Meteo updates hourly, so reusing a response for a while is safe.
+CACHE_TTL_SECONDS = int(os.environ.get("WEATHER_CACHE_TTL_SECONDS", "1800"))
+
+# Coordinates are rounded before caching (~1 km at 2 decimals), which is
+# finer than the weather model grid, so nearby sample points share a response.
+CACHE_COORD_DECIMALS = 2
 
 HOURLY_VARIABLES = [
     "temperature_2m",
@@ -43,6 +64,39 @@ class WeatherServiceError(Exception):
     """Raised when the upstream weather API cannot be reached or returns bad data."""
 
 
+# Retry rate-limit (429) and transient server errors with exponential backoff.
+_session = requests.Session()
+_session.mount(
+    "https://",
+    HTTPAdapter(
+        max_retries=Retry(
+            total=3,
+            backoff_factor=1.5,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
+            respect_retry_after_header=False,
+        )
+    ),
+)
+
+_cache = {}
+_cache_lock = threading.Lock()
+
+
+def _get_cached(key):
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry and time.monotonic() - entry[0] < CACHE_TTL_SECONDS:
+            return entry[1].copy()
+        _cache.pop(key, None)
+    return None
+
+
+def _set_cached(key, df):
+    with _cache_lock:
+        _cache[key] = (time.monotonic(), df.copy())
+
+
 def fetch_hourly_weather(
     latitude: float,
     longitude: float,
@@ -51,7 +105,16 @@ def fetch_hourly_weather(
     """
     Fetch hourly forecast data from Open-Meteo for the given coordinates
     and return it as a DataFrame with standardized column names.
+    Responses are cached briefly per rounded coordinate.
     """
+
+    latitude = round(latitude, CACHE_COORD_DECIMALS)
+    longitude = round(longitude, CACHE_COORD_DECIMALS)
+    cache_key = (latitude, longitude, forecast_days)
+
+    cached = _get_cached(cache_key)
+    if cached is not None:
+        return cached
 
     params = {
         "latitude": latitude,
@@ -62,12 +125,17 @@ def fetch_hourly_weather(
         "wind_speed_unit": "ms",
         "timezone": "Asia/Kolkata",
     }
+    if OPEN_METEO_API_KEY:
+        params["apikey"] = OPEN_METEO_API_KEY
 
     try:
-        response = requests.get(OPEN_METEO_URL, params=params, timeout=30)
+        response = _session.get(OPEN_METEO_URL, params=params, timeout=30)
         response.raise_for_status()
     except requests.RequestException as exc:
-        raise WeatherServiceError(f"Failed to fetch weather data: {exc}") from exc
+        detail = str(exc)
+        if OPEN_METEO_API_KEY:
+            detail = detail.replace(OPEN_METEO_API_KEY, "***")
+        raise WeatherServiceError(f"Failed to fetch weather data: {detail}") from exc
 
     try:
         payload = response.json()
@@ -85,4 +153,5 @@ def fetch_hourly_weather(
     df["time"] = pd.to_datetime(df["time"])
     df = df.rename(columns=COLUMN_RENAME_MAP)
 
+    _set_cached(cache_key, df)
     return df
