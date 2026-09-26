@@ -12,6 +12,7 @@ Then open:
 """
 
 import logging
+import os
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,17 +31,25 @@ app = FastAPI(
 )
 
 # ------------------------------------------------------------
-# CORS - allow local frontend dev servers to call this API
+# CORS - allow local frontend dev servers to call this API,
+# plus any deployed frontends listed in FRONTEND_ORIGINS
+# (comma-separated, e.g. "https://heatguard.vercel.app")
 # ------------------------------------------------------------
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://localhost:8080",
+] + [
+    origin.strip().rstrip("/")
+    for origin in os.environ.get("FRONTEND_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://localhost:8080",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
