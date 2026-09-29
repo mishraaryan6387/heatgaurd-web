@@ -1,4 +1,5 @@
-import { AlertTriangle, Droplets, HeartPulse, ShieldCheck, Snowflake, Sun } from "lucide-react";
+import { AlertTriangle, Droplets, HeartPulse, ShieldCheck, Snowflake, Sun, CheckCircle2, Circle } from "lucide-react";
+import { useState } from "react";
 import { SectionHeading } from "./MetricsGrid";
 import { riskStyle } from "@/lib/risk";
 
@@ -65,14 +66,30 @@ export function SafetySection({ day }) {
     ? `Predicted heat-stress window: ${timing}.`
     : "No elevated heat-stress window is predicted for this day.";
 
-  return (
-    <section id="safety">
-      <SectionHeading
-        title={`Heat Safety Recommendations · ${isHeatwave ? style.label : "No Elevated Risk"}`}
-        subtitle={isHeatwave ? guidance.intro : "Routine precautions are recommended because no elevated heat-stress condition is predicted for the selected day."}
-      />
+  const [checkedItems, setCheckedItems] = useState({});
 
-      <div className={`mt-5 rounded-2xl border-2 p-4 ${isHeatwave ? `${style.border} ${style.bg}` : "border-risk-low/40 bg-risk-low-soft"}`}>
+  const toggleCheck = (title) => {
+    setCheckedItems((prev) => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  const completedCount = Object.values(checkedItems).filter(Boolean).length;
+
+  return (
+    <section id="safety" className="scroll-mt-24">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <SectionHeading
+          title={`Heat Safety Guidelines · ${isHeatwave ? style.label : "No Elevated Risk"}`}
+          subtitle={isHeatwave ? guidance.intro : "Routine precautions are recommended because no elevated heat-stress condition is predicted."}
+        />
+        {guidance.items.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground shadow-2xs">
+            <CheckCircle2 className="size-3.5 text-emerald-500" />
+            <span>{completedCount} / {guidance.items.length} Completed</span>
+          </span>
+        )}
+      </div>
+
+      <div className={`mt-5 rounded-2xl border-2 p-4 sm:p-5 shadow-xs ${isHeatwave ? `${style.border} ${style.bg}` : "border-risk-low/40 bg-risk-low-soft"}`}>
         <div className="flex items-start gap-3">
           <ShieldCheck className={`mt-0.5 size-5 shrink-0 ${isHeatwave ? style.text : "text-risk-low"}`} />
           <div>
@@ -85,16 +102,34 @@ export function SafetySection({ day }) {
       </div>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {guidance.items.map(({ icon: Icon, title, description }) => (
-          <article key={title} className="fade-rise surface-card lift-hover p-5">
-            <span className="flex size-11 items-center justify-center rounded-xl bg-secondary">
-              <Icon className={`size-5 ${isHeatwave ? style.text : "text-risk-low"}`} />
-            </span>
-            <h3 className="mt-4 font-display text-base font-semibold">{title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
-          </article>
-        ))}
+        {guidance.items.map(({ icon: Icon, title, description }) => {
+          const isDone = Boolean(checkedItems[title]);
+          return (
+            <article
+              key={title}
+              onClick={() => toggleCheck(title)}
+              className={`fade-rise surface-card lift-hover cursor-pointer p-5 transition-all select-none ${
+                isDone ? "ring-2 ring-emerald-500/50 bg-emerald-50/20" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className={`flex size-11 items-center justify-center rounded-xl transition-colors ${isDone ? "bg-emerald-500/15 text-emerald-600" : "bg-secondary"}`}>
+                  <Icon className={`size-5 ${isDone ? "text-emerald-600" : isHeatwave ? style.text : "text-risk-low"}`} />
+                </span>
+                <button type="button" className="text-muted-foreground hover:text-foreground">
+                  {isDone ? <CheckCircle2 className="size-5 text-emerald-500" /> : <Circle className="size-5 opacity-40" />}
+                </button>
+              </div>
+
+              <h3 className={`mt-4 font-display text-base font-semibold ${isDone ? "line-through opacity-75" : ""}`}>
+                {title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
 }
+

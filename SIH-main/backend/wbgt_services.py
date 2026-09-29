@@ -15,13 +15,46 @@ Output:
 import numpy as np
 import pandas as pd
 
-from pywbgt import wbgt
-from metpy.units import units
+try:
+    from pywbgt import wbgt
+    from metpy.units import units
+    _HAS_PYWBGT = True
+except Exception:
+    wbgt = None
+    units = None
+    _HAS_PYWBGT = False
 
 
 # ============================================================
 # WBGT CALCULATION
 # ============================================================
+
+def calculate_wbgt_stull(temperature, humidity, solar_radiation, wind_speed):
+    """
+    Standard Stull outdoor WBGT approximation using air temperature,
+    relative humidity, solar radiation, and wind speed.
+    Matches the verified formula in predict.py.
+    """
+    temp = np.asarray(temperature, dtype=float)
+    rh = np.clip(np.asarray(humidity, dtype=float), 0.0, 100.0)
+    solar = np.clip(np.asarray(solar_radiation, dtype=float), 0.0, None)
+    wind = np.clip(np.asarray(wind_speed, dtype=float), 0.0, None)
+
+    # Stull natural wet-bulb approximation
+    wet_bulb = (
+        temp * np.arctan(0.151977 * np.sqrt(rh + 8.313659))
+        + np.arctan(temp + rh)
+        - np.arctan(rh - 1.676331)
+        + 0.00391838 * (rh ** 1.5) * np.arctan(0.023101 * rh)
+        - 4.686035
+    )
+
+    # Globe temperature approximation
+    globe_temp = temp + 0.025 * solar - 0.1 * wind
+
+    # Standard outdoor WBGT: 70% wet bulb, 20% globe, 10% dry bulb
+    return 0.7 * wet_bulb + 0.2 * globe_temp + 0.1 * temp
+
 
 def calculate_hourly_wbgt(
     df: pd.DataFrame,
@@ -64,96 +97,52 @@ def calculate_hourly_wbgt(
 
     result_df = df.copy()
 
-    # --------------------------------------------------------
-    # Temperature
-    # Open-Meteo gives Celsius.
-    # pywbgt requires Kelvin.
-    # --------------------------------------------------------
+    # Ensure humidity is present (compute via Magnus formula if absent)
+    if "humidity" not in result_df.columns:
+        a = 17.625
+        b = 243.04
+        t = result_df["temperature"].values
+        td = result_df["dewpoint"].values
+        result_df["humidity"] = 100.0 * (
+            np.exp((a * td) / (b + td)) / np.exp((a * t) / (b + t))
+        )
 
-    temp_air = (
-        result_df["temperature"].values + 273.15
-    ) * units.kelvin
+    computed = False
+    if _HAS_PYWBGT and units is not None:
+        try:
+            temp_air = (result_df["temperature"].values + 273.15) * units.kelvin
+            temp_dew = (result_df["dewpoint"].values + 273.15) * units.kelvin
+            wind = (result_df["wind_speed"].values * units.meter / units.second)
+            solar = (result_df["solar_radiation"].values * units.watt / units.meter**2)
+            pressure = (result_df["pressure"].values * 100) * units.pascal
+            datetime = pd.DatetimeIndex(result_df["valid_time"])
+            lat_array = np.full(len(result_df), latitude)
+            lon_array = np.full(len(result_df), longitude)
 
-    temp_dew = (
-        result_df["dewpoint"].values + 273.15
-    ) * units.kelvin
+            wbgt_result = wbgt(
+                datetime=datetime,
+                lat=lat_array,
+                lon=lon_array,
+                solar=solar,
+                pres=pressure,
+                temp_air=temp_air,
+                temp_dew=temp_dew,
+                speed=wind,
+                method="liljegren"
+            )
+            wbgt_values = wbgt_result[3]
+            result_df["WBGT_C"] = wbgt_values.magnitude
+            computed = True
+        except Exception:
+            computed = False
 
-    # --------------------------------------------------------
-    # Wind speed
-    # Open-Meteo configured to return m/s.
-    # --------------------------------------------------------
-
-    wind = (
-        result_df["wind_speed"].values
-        * units.meter
-        / units.second
-    )
-
-    # --------------------------------------------------------
-    # Solar radiation
-    # Open-Meteo gives W/m².
-    # --------------------------------------------------------
-
-    solar = (
-        result_df["solar_radiation"].values
-        * units.watt
-        / units.meter**2
-    )
-
-    # --------------------------------------------------------
-    # Pressure
-    # Open-Meteo gives pressure in hPa.
-    #
-    # Convert to Pa for pywbgt.
-    # --------------------------------------------------------
-
-    pressure = (
-        result_df["pressure"].values * 100
-    ) * units.pascal
-
-    # --------------------------------------------------------
-    # Datetime
-    # --------------------------------------------------------
-
-    datetime = pd.DatetimeIndex(
-        result_df["valid_time"]
-    )
-
-    # --------------------------------------------------------
-    # Latitude / Longitude arrays
-    # --------------------------------------------------------
-
-    lat_array = np.full(
-        len(result_df),
-        latitude
-    )
-
-    lon_array = np.full(
-        len(result_df),
-        longitude
-    )
-
-    # --------------------------------------------------------
-    # Calculate WBGT
-    # --------------------------------------------------------
-
-    wbgt_result = wbgt(
-        datetime=datetime,
-        lat=lat_array,
-        lon=lon_array,
-        solar=solar,
-        pres=pressure,
-        temp_air=temp_air,
-        temp_dew=temp_dew,
-        speed=wind,
-        method="liljegren"
-    )
-
-    wbgt_values = wbgt_result[3]
-
-    result_df["WBGT_C"] = (
-        wbgt_values.magnitude
-    )
+    if not computed:
+        result_df["WBGT_C"] = calculate_wbgt_stull(
+            result_df["temperature"],
+            result_df["humidity"],
+            result_df["solar_radiation"],
+            result_df["wind_speed"],
+        )
 
     return result_df
 
@@ -297,11 +286,17 @@ def calculate_daily_wbgt_indicators(
             .fillna(0)
         )
 
-        daily["rain_status"] = np.where(
-            daily["total_rain"] > 0,
-            "Rain",
-            "No Rain"
-        )
+        def _classify_rain(val):
+            if val < 0.1:
+                return "No rain"
+            elif val < 2.5:
+                return "Light rain"
+            elif val < 15.0:
+                return "Moderate rain"
+            else:
+                return "Heavy rain"
+
+        daily["rain_status"] = daily["total_rain"].apply(_classify_rain)
 
     else:
 

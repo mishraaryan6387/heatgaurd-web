@@ -11,8 +11,8 @@ import { WbgtSection } from "@/components/heatguard/WbgtSection";
 import { ForecastList } from "@/components/heatguard/ForecastList";
 import { Charts } from "@/components/heatguard/Charts";
 import { SafetySection } from "@/components/heatguard/SafetySection";
-import { HowItWorks } from "@/components/heatguard/HowItWorks";
-import { SystemArchitecture } from "@/components/heatguard/SystemArchitecture";
+import { HumanImpact } from "@/components/heatguard/HumanImpact";
+import { DateSelector } from "@/components/heatguard/DateSelector";
 import { Footer } from "@/components/heatguard/Footer";
 import { checkBackendHealth, getForecast, ApiError } from "@/lib/api";
 
@@ -28,7 +28,7 @@ function isDelhi(state) {
 }
 
 function Index() {
-  const [selectedState, setSelectedState] = useState("");
+  const [selectedState, setSelectedState] = useState("Delhi");
   const [forecastData, setForecastData] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -150,14 +150,14 @@ function Index() {
           <div className="space-y-12">
             <LocationCard stateName={selectedState} />
             <HeatwaveAlert forecast={forecastData.forecast} />
+            <DateSelector forecast={forecastData.forecast} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+            {selectedDay && <HumanImpact day={selectedDay} stateName={selectedState} />}
             {selectedDay && <RiskOverview day={selectedDay} />}
             {selectedDay && <MetricsGrid day={selectedDay} />}
-            {selectedDay && <WbgtSection day={selectedDay} />}
             <ForecastList forecast={forecastData.forecast} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
             <Charts forecast={forecastData.forecast} />
             <SafetySection day={selectedDay} />
-            <HowItWorks />
-            <SystemArchitecture />
+            {selectedDay && <WbgtSection day={selectedDay} />}
           </div>
         )}
       </main>

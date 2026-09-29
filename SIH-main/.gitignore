@@ -18,3 +18,6 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+# Local package/archive
+pywbgt-3.0.7/
+*.tar.gz

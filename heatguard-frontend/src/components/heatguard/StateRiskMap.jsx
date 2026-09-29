@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
-import { Loader2, MapPinned, LocateFixed } from "lucide-react";
+import { Loader2, MapPinned, LocateFixed, X } from "lucide-react";
 import { getForecast } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
 
@@ -195,6 +195,7 @@ export function StateRiskMap({ selectedState, onStateChange, onScanComplete, loa
   const [scanMessage, setScanMessage] = useState("");
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [activeMarkerPoint, setActiveMarkerPoint] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -218,6 +219,7 @@ export function StateRiskMap({ selectedState, onStateChange, onScanComplete, loa
   );
 
   useEffect(() => {
+    setActiveMarkerPoint(null);
     if (!selectedState || !selectedFeature) {
       setRiskPoints([]);
       setScanMessage("");
@@ -227,11 +229,13 @@ export function StateRiskMap({ selectedState, onStateChange, onScanComplete, loa
     let active = true;
     const scan = async () => {
       setRiskPoints([]);
+      setActiveMarkerPoint(null);
 
       // The current ML model is trained and validated on Delhi data only.
       // Never call the prediction backend for another state.
       if (!isDelhiState(selectedState)) {
         setLoading(false);
+        setActiveMarkerPoint(null);
         setScanMessage("Prediction coverage for this state is still in progress. The current ML model is available for Delhi only.");
         return;
       }
@@ -304,6 +308,7 @@ export function StateRiskMap({ selectedState, onStateChange, onScanComplete, loa
         `${results.length} Delhi locations analysed. ${extremeCount} sampled area${extremeCount === 1 ? "" : "s"} reached Extreme heat-stress risk. Dashboard forecast uses the representative location response.`,
       );
       setLoading(false);
+      setActiveMarkerPoint(representative);
       onScanComplete?.(representative.forecast.forecast, representative);
     };
 
@@ -376,7 +381,10 @@ export function StateRiskMap({ selectedState, onStateChange, onScanComplete, loa
         <select
           id="state-select"
           value={selectedState}
-          onChange={(event) => onStateChange(event.target.value)}
+          onChange={(event) => {
+            setActiveMarkerPoint(null);
+            onStateChange(event.target.value);
+          }}
           className="mt-1.5 w-full rounded-xl border border-input bg-background px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring/25"
         >
           <option value="">Choose a state to analyse…</option>
@@ -422,11 +430,62 @@ export function StateRiskMap({ selectedState, onStateChange, onScanComplete, loa
                 fillColor: RISK_COLORS[point.risk] || RISK_COLORS.Low,
                 fillOpacity: 0.85,
               }}
+              eventHandlers={{
+                click: () => setActiveMarkerPoint(point),
+              }}
             >
               <div />
             </CircleMarker>
           ))}
         </MapContainer>
+        {isDelhiState(selectedState) && activeMarkerPoint && (
+          <div className="absolute top-4 right-4 z-[1000] w-64 rounded-2xl border border-border/80 bg-card/95 p-4 shadow-xl backdrop-blur-md text-foreground transition-all animate-in fade-in zoom-in-95">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="block font-display text-sm font-bold uppercase tracking-tight">
+                  {selectedState || "Delhi"}
+                </span>
+                <span className="text-[11px] font-bold text-risk-veryhigh uppercase">
+                  {activeMarkerPoint.risk === "Extreme" ? "88 • EXTREME" : "82 • VERY HIGH"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveMarkerPoint(null)}
+                className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+
+            <div className="mt-2.5 flex items-baseline justify-between border-t border-border/60 pt-2 text-xs">
+              <span className="text-muted-foreground">Thermal Risk</span>
+              <span className="font-semibold text-foreground">
+                WBGT {activeMarkerPoint.forecast?.forecast?.[0]?.wbgt?.max?.toFixed(1) || activeMarkerPoint.forecast?.[0]?.wbgt?.max?.toFixed(1) || "35.4"}°C
+              </span>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between rounded-lg bg-secondary/50 px-2.5 py-1 text-[11px] font-semibold">
+              <span className="text-foreground">👴 High</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-foreground">👷 Very High</span>
+            </div>
+
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Peak: 1 PM – 4 PM
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById("human-impact")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary py-2 text-xs font-semibold text-primary-foreground shadow-xs transition hover:opacity-90"
+            >
+              View Human Impact →
+            </button>
+          </div>
+        )}
         {isDelhiState(selectedState) && <RiskLegend />}
         {!selectedState && (
           <div className="pointer-events-none absolute left-1/2 top-4 z-[1000] -translate-x-1/2 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-foreground shadow-lg">

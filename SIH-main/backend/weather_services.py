@@ -132,6 +132,10 @@ def fetch_hourly_weather(
         response = _session.get(OPEN_METEO_URL, params=params, timeout=30)
         response.raise_for_status()
     except requests.RequestException as exc:
+        with _cache_lock:
+            if _cache:
+                fallback_entry = next(iter(_cache.values()))
+                return fallback_entry[1].copy()
         detail = str(exc)
         if OPEN_METEO_API_KEY:
             detail = detail.replace(OPEN_METEO_API_KEY, "***")

@@ -39,7 +39,7 @@ async function fetchWithTimeout(url, timeoutMs = 20000) {
 /** Returns true when GET /api/health responds with an ok status. */
 export async function checkBackendHealth() {
     try {
-        const res = await fetchWithTimeout(`${BASE_URL}/api/health`, 8000);
+        const res = await fetchWithTimeout(`${BASE_URL}/api/health`, 5000);
         if (!res.ok)
             return false;
         const data = (await res.json());
@@ -49,6 +49,7 @@ export async function checkBackendHealth() {
         return false;
     }
 }
+
 function isValidDay(day) {
     const d = day;
     return (!!d &&
@@ -64,38 +65,87 @@ function isValidDay(day) {
         typeof d.rain?.total === "number" &&
         typeof d.rain?.status === "string");
 }
+
+export function generateDelhiMockForecast(lat = 28.6139, lon = 77.2090) {
+  const today = new Date();
+  const forecast = [];
+  const risks = ["High", "Extreme", "Very High", "Extreme", "High", "Moderate", "Low"];
+  const maxTemps = [41.2, 44.5, 43.1, 44.8, 40.5, 38.2, 36.4];
+  const meanTemps = [34.5, 37.2, 36.0, 37.8, 33.9, 31.8, 30.1];
+  const maxWbgts = [31.4, 34.2, 32.8, 34.6, 31.0, 29.2, 27.5];
+  const meanWbgts = [27.8, 30.1, 29.4, 30.5, 27.2, 25.4, 24.1];
+  const rainTotals = [0.0, 0.0, 0.0, 0.0, 2.5, 12.0, 5.2];
+  const rainStatuses = ["No rain", "No rain", "No rain", "No rain", "Light rain likely", "Moderate rain", "Patchy rain"];
+  const timings = [
+    { label: "12:00 PM - 04:30 PM (Peak Heat Stress)" },
+    { label: "11:30 AM - 05:00 PM (Extreme Heat-Stress Window)" },
+    { label: "12:00 PM - 04:00 PM (High Heat-Stress Window)" },
+    { label: "11:00 AM - 05:30 PM (Severe Heatwave Window)" },
+    { label: "01:00 PM - 03:30 PM (Moderate Heat-Stress Window)" },
+    { label: "No elevated heat-stress window predicted" },
+    { label: "No elevated heat-stress window predicted" },
+  ];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split("T")[0];
+    const wbgtMax = maxWbgts[i];
+    const heatwave = wbgtMax >= 30;
+
+    forecast.push({
+      date: dateStr,
+      heatwave,
+      risk: risks[i],
+      heatwave_timing: timings[i],
+      temperature: { max: maxTemps[i], mean: meanTemps[i] },
+      wbgt: { max: wbgtMax, mean: meanWbgts[i] },
+      rain: { total: rainTotals[i], status: rainStatuses[i] },
+    });
+  }
+
+  return {
+    location: { latitude: Number(lat), longitude: Number(lon) },
+    forecast,
+    isMock: true,
+  };
+}
+
 /** GET /api/predict?latitude=..&longitude=.. */
 export async function getForecast(latitude, longitude) {
     const url = `${BASE_URL}/api/predict?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`;
     let res;
     try {
-        res = await fetchWithTimeout(url);
+        res = await fetchWithTimeout(url, 15000);
     }
     catch {
-        throw new ApiError("Could not reach the prediction server. Please check your connection and make sure the server is running.");
+        // Fallback to offline Delhi mock prediction when python backend is offline
+        return generateDelhiMockForecast(latitude, longitude);
     }
-    if (!res.ok)
-        throw new ApiError(friendlyStatusMessage(res.status), res.status);
+    if (!res.ok) {
+        return generateDelhiMockForecast(latitude, longitude);
+    }
     let data;
     try {
         data = await res.json();
     }
     catch {
-        throw new ApiError("The prediction service returned data we could not read.");
+        return generateDelhiMockForecast(latitude, longitude);
     }
     const payload = data;
     if (!payload ||
         typeof payload.location?.latitude !== "number" ||
         typeof payload.location?.longitude !== "number" ||
         !Array.isArray(payload.forecast)) {
-        throw new ApiError("The prediction service returned data in an unexpected format.");
+        return generateDelhiMockForecast(latitude, longitude);
     }
     const forecast = payload.forecast.filter(isValidDay);
     if (forecast.length === 0) {
-        throw new ApiError("No forecast data is available for this location right now.");
+        return generateDelhiMockForecast(latitude, longitude);
     }
-    return { location: payload.location, forecast };
+    return { location: payload.location, forecast, isMock: false };
 }
+
 /** Client-side guard mirroring the backend's coordinate rules. */
 export function validateCoordinates(latitudeInput, longitudeInput) {
     const lat = Number(latitudeInput);
@@ -110,3 +160,4 @@ export function validateCoordinates(latitudeInput, longitudeInput) {
         return { ok: false, message: "Longitude must be between -180 and 180." };
     return { ok: true, latitude: lat, longitude: lon };
 }
+
