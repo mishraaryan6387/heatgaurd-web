@@ -30,7 +30,7 @@ An AI-driven Heat-Stress Risk Assessment platform for India, translating multi-p
 ## 📖 In-Depth Project Documentation
 
 * 🗺️ **[PROJECT_WORKFLOW.md](./PROJECT_WORKFLOW.md)**: Comprehensive architectural pipeline, GIS ray-casting algorithm, WBGT calculation physics, and component tree.
-* 📊 **[PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)**: Executive summary, SIH presentation slide breakdown, and rapid Q&A cheat sheet.
+
 
 ---
 
