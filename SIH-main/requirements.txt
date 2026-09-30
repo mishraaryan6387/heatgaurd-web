@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+requests
+joblib
+xarray
+# Must match the version the .pkl models were trained with
+scikit-learn==1.9.0
+pywbgt
+metpy
