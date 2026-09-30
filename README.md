@@ -2,13 +2,35 @@
 
 [![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776ab?logo=python&logoColor=white)](https://www.python.org/)
+[![Scikit--Learn](https://img.shields.io/badge/Scikit--Learn-ML-f7931e?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900?logo=leaflet&logoColor=white)](https://leafletjs.com/)
-[![Recharts](https://img.shields.io/badge/Recharts-2.15-22b5bf)](https://recharts.org/)
+[![Render](https://img.shields.io/badge/Render-Backend_Live-46E3B7?logo=render&logoColor=black)](https://heatgaurd-backend.onrender.com)
+[![Vercel](https://img.shields.io/badge/Vercel-Frontend_Live-000000?logo=vercel&logoColor=white)](https://vercel.com/)
 
-An AI-driven Heat-Stress Risk Assessment platform for India, translating meteorological predictions and machine learning models into actionable Wet Bulb Globe Temperature (WBGT) insights, localized spatial risk mapping, demographic human vulnerability analysis, and public safety advisories.
+An AI-driven Heat-Stress Risk Assessment platform for India, translating multi-parameter meteorological predictions and machine learning models into actionable Wet Bulb Globe Temperature (WBGT) insights, localized spatial risk mapping, demographic human vulnerability analysis, and public safety advisories.
 
-> 📘 **For comprehensive workflow diagrams, spatial ray-casting algorithms, and complete mathematical formulations, check out [PROJECT_WORKFLOW.md](./PROJECT_WORKFLOW.md).**
+> 📘 **Looking for technical deep dives?** Check out the full **[Project Workflow & Architecture (PROJECT_WORKFLOW.md)](./PROJECT_WORKFLOW.md)** for spatial ray-casting algorithms, WBGT physics, and data flow diagrams.
+
+---
+
+## 🌐 Live Deployments
+
+| Component | Platform | Status | URL |
+|---|---|---|---|
+| **Frontend Application** | **Vercel** | 🟢 **Live** | [Deployed on Vercel](https://heatgaurd-web-p9t6.vercel.app) |
+| **ML Backend API** | **Render** | 🟢 **Live** | [`https://heatgaurd-backend.onrender.com`](https://heatgaurd-backend.onrender.com) |
+| **Interactive API Docs** | **Swagger UI** | 🟢 **Live** | [`https://heatgaurd-backend.onrender.com/docs`](https://heatgaurd-backend.onrender.com/docs) |
+| **API Health Endpoint** | **REST Service** | 🟢 **200 OK** | [`https://heatgaurd-backend.onrender.com/api/health`](https://heatgaurd-backend.onrender.com/api/health) |
+
+---
+
+## 📖 In-Depth Project Documentation
+
+* 🗺️ **[PROJECT_WORKFLOW.md](./PROJECT_WORKFLOW.md)**: Comprehensive architectural pipeline, GIS ray-casting algorithm, WBGT calculation physics, and component tree.
+* 📊 **[PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)**: Executive summary, SIH presentation slide breakdown, and rapid Q&A cheat sheet.
 
 ---
 
@@ -17,14 +39,14 @@ An AI-driven Heat-Stress Risk Assessment platform for India, translating meteoro
 - **🗺️ Interactive State-Based Heat Risk Map (GIS & GeoJSON)**:
   - Powered by Leaflet & React-Leaflet with official India state boundary GeoJSON polygons.
   - Automatic boundary detection with smooth camera zoom (`fitBounds`).
-  - Spatial ray-casting point sampling inside polygon borders to visualize risk distribution.
+  - Spatial ray-casting point sampling inside polygon borders to visualize risk distribution across the landmass.
   - Interactive map markers with risk-coded pins and floating human impact preview popups.
   - **"Use My Location"** button with automatic reverse geocoding to identify your state.
 
-- **🤖 ML Prediction Integration & Resilient Offline Fallback**:
-  - Connects to the FastAPI backend (`/api/predict?latitude=...&longitude=...`) for high-resolution 7-day temperature, WBGT, and heatwave predictions (active ML coverage for Delhi).
+- **🤖 ML Prediction Engine & Resilient Offline Fallback**:
+  - Connects to the live FastAPI backend (`/api/predict?latitude=...&longitude=...`) for high-resolution 7-day temperature, WBGT, and heatwave predictions (active ML coverage for Delhi).
   - Clean *"Coverage in Progress"* status for other Indian states while models are being trained.
-  - **Built-in Offline Resilience**: If the backend is offline or unreachable, the frontend automatically switches to a realistic Delhi simulation model (`generateDelhiMockForecast`), ensuring seamless live demos and testing.
+  - **Built-in Offline Resilience**: If the backend is unreachable, the frontend automatically switches to an internal simulation model (`generateDelhiMockForecast`), ensuring uninterrupted demos and zero crash states.
 
 - **📅 7-Day Synchronized Date Stepper & Carousel**:
   - Interactive date timeline controller with "Today", "Tomorrow", and relative day labels.
@@ -32,8 +54,8 @@ An AI-driven Heat-Stress Risk Assessment platform for India, translating meteoro
   - Unidirectional state management: selecting any date synchronizes all dashboard metrics, human impact scores, WBGT breakdowns, and safety guidelines.
 
 - **👥 Human Impact Assessment Layer**:
-  - Visual 0–100 SVG radial score ring evaluated via deterministic scoring:
-    $$\text{Thermal Stress (50\%)} + \text{Vulnerability (30\%)} + \text{Exposure (20\%)}$$
+  - Visual 0–100 SVG radial score ring evaluated via deterministic multi-factor scoring:
+    $$\text{Human Impact Score} = \text{Thermal Stress (50\%)} + \text{Demographic Vulnerability (30\%)} + \text{Outdoor Labor Exposure (20\%)}$$
   - Demographic vulnerability progress bars (Elderly ratio, Outdoor Workers, Population Density).
   - **"Recommended Now" Action Chips**: Interactive action triggers (*Hydration*, *Shift Work Hours*, *Elderly Alert*, *Hospital Readiness*, *Cooling Shelters*) with hover/click micro-tooltips.
 
@@ -45,7 +67,7 @@ An AI-driven Heat-Stress Risk Assessment platform for India, translating meteoro
 - **📈 Interactive Data Visualizations (Recharts)**:
   - Dual line/area charts comparing Dry-Bulb Air Temperature vs. Wet Bulb Globe Temperature.
   - Daily rainfall depth bar chart with conditional precipitation highlights.
-  - Heatwave cutoff reference line indicators.
+  - Heatwave cutoff reference line indicators ($30^\circ\text{C}$).
 
 - **🛡️ Tailored Heat Safety Guidelines & Interactive Checklist**:
   - Dynamically customized advice for Hydration, Sun Protection, Cooling, and Vulnerable Care.
@@ -61,122 +83,113 @@ An AI-driven Heat-Stress Risk Assessment platform for India, translating meteoro
 
 ## 🛠️ Technology Stack
 
-| Domain | Technology |
-|---|---|
-| **Frontend Framework** | React 19, JavaScript (JSX), Vite 8 |
-| **Styling & Design System** | Tailwind CSS v4 (`@tailwindcss/vite`, `tw-animate-css`), OKLCH color palette |
-| **GIS & Mapping** | Leaflet 1.9.4, React-Leaflet 5.0.0, OpenStreetMap, GeoJSON (`udit-001/india-maps-data`) |
-| **Data Visualization** | Recharts 2.15 (AreaChart, LineChart, BarChart) |
-| **Iconography** | Lucide React |
-| **UI Primitives** | Radix UI primitives (`@radix-ui/react-*`), class-variance-authority, clsx, tailwind-merge |
-| **Backend Integration** | REST API (FastAPI backend at `http://127.0.0.1:8000` with offline mock fallback) |
+| Domain | Technology | Description |
+|---|---|---|
+| **Frontend Framework** | React 19, JavaScript (JSX), Vite 8 | Ultra-fast client-side SPA architecture |
+| **Styling & Design** | Tailwind CSS v4, OKLCH tokens | Modern glassmorphic theme with responsive layout |
+| **GIS & Mapping** | Leaflet 1.9, React-Leaflet 5, GeoJSON | Ray-casting point sampling inside Indian state borders |
+| **Data Visualization** | Recharts 2.15 | Dual-axis line charts and precipitation histograms |
+| **Backend & API** | FastAPI, Uvicorn, Python 3.12 | REST API handling predictions, CORS, and health checks |
+| **Machine Learning** | Scikit-Learn, Joblib, NumPy, Pandas | Random Forest classifiers trained on ERA5 reanalysis data |
+| **Heat-Stress Science** | Liljegren / PyWBGT, MetPy | Wet Bulb Globe Temperature calculation formulation |
+| **Cloud Hosting** | Vercel (Frontend), Render (Backend) | Production cloud infrastructure |
 
 ---
 
-## 📁 Project Directory Structure
+## 📁 Repository Structure
 
 ```
-heatguard-frontend/
-├── index.html                     # HTML5 entry point
-├── package.json                   # Dependencies & scripts
-├── vite.config.js                 # Vite & Tailwind CSS v4 configuration
-├── .env.example                   # Environment variable template
-├── PROJECT_WORKFLOW.md            # Detailed architecture & workflow documentation
-├── README.md                      # Project overview & guide
-├── public/                        # Static assets & icons
-└── src/
-    ├── main.jsx                   # Application entry point
-    ├── styles.css                 # OKLCH design variables, glassmorphism & animations
-    ├── routes/
-    │   └── index.jsx              # Main dashboard page orchestrator
-    ├── components/
-    │   ├── heatguard/             # HeatGuard domain-specific components
-    │   │   ├── Navbar.jsx         # Sticky scroll-spy navigation & health badge
-    │   │   ├── Hero.jsx           # Hero banner, quick-state buttons & GIS card
-    │   │   ├── StateRiskMap.jsx   # Leaflet map, ray-casting sampling & pin popups
-    │   │   ├── LocationCard.jsx   # State info, PDF print, notifications & share
-    │   │   ├── HeatwaveAlert.jsx  # Multi-day heatwave warning banner
-    │   │   ├── DateSelector.jsx   # 7-day timeline controller & date switcher
-    │   │   ├── HumanImpact.jsx    # Radial score ring, vulnerability bars & action chips
-    │   │   ├── RiskOverview.jsx   # Risk meter gauge & condition callouts
-    │   │   ├── MetricsGrid.jsx    # Environmental & meteorological metrics cards
-    │   │   ├── ForecastList.jsx   # 7-day outlook card carousel
-    │   │   ├── Charts.jsx         # Recharts temperature, WBGT & rain graphs
-    │   │   ├── SafetySection.jsx  # Heat safety guidelines with interactive checklist
-    │   │   ├── WbgtSection.jsx    # WBGT educational breakdown & gauge
-    │   │   ├── LoadingState.jsx   # Skeleton loaders
-    │   │   ├── ErrorState.jsx     # Error boundary card with retry
-    │   │   └── Footer.jsx         # Application footer
-    │   └── ui/                    # Reusable UI component library
-    └── lib/
-        ├── api.js                 # API service, health checks & offline mock fallback
-        ├── risk.js                # Risk rankings, color scales & formatting helpers
-        ├── vulnerabilityData.js   # Human impact formula & state vulnerability profiles
-        └── utils.js               # Tailwind styling utilities
+heatgaurd/
+├── PROJECT_SUMMARY.md             # Complete architecture and SIH PPT overview
+├── README.md                      # Primary project overview & live deployment links
+│
+├── SIH-main/                      # Backend ML Service (Deployed on Render)
+│   ├── backend/
+│   │   ├── main.py                # FastAPI server, CORS middleware & route handlers
+│   │   ├── prediction_services.py # ML model loading and feature matrix inference
+│   │   ├── weather_services.py    # Open-Meteo weather forecast caching pipeline
+│   │   └── schemas.py             # Pydantic response and request models
+│   ├── models/
+│   │   ├── heatwave_model.pkl     # Trained Random Forest Heatwave Classifier
+│   │   └── risk_model.pkl         # Trained Multi-class Risk Severity Classifier
+│   ├── calculate_wbgt.py          # ERA5 NetCDF loader & WBGT Liljegren formulation
+│   ├── train_model.py             # Chronological ML training script
+│   ├── requirements.txt           # Python dependencies
+│   ├── Procfile                   # Cloud process execution rule for Render
+│   └── BACKEND_SETUP.md           # Backend setup documentation
+│
+└── heatguard-frontend/            # Frontend Web Application (Deployed on Vercel)
+    ├── src/
+    │   ├── components/heatguard/  # Navbar, StateRiskMap, HumanImpact, Charts, etc.
+    │   ├── lib/                   # API client, risk tokens, mock engine, vulnerability data
+    │   ├── routes/                # Application root page orchestrator
+    │   └── styles.css             # Design tokens, gradients, animations
+    ├── index.html                 # HTML entry point
+    ├── vercel.json                # Vercel SPA routing and rewrite rules
+    ├── package.json               # Node.js dependencies & scripts
+    └── vite.config.js             # Vite 8 & Tailwind CSS v4 config
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Local Development Setup
 
-### Prerequisites
+### 1. Backend (Python FastAPI)
 
-- [Node.js](https://nodejs.org/) (version 18 or higher recommended)
-- `npm` or `pnpm`
+```powershell
+# Navigate to backend directory
+cd SIH-main
 
-### Installation
+# Install dependencies
+pip install -r requirements.txt
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/heatguard-frontend.git
+# Start local server on port 8000
+uvicorn backend.main:app --reload --port 8000
+```
+- API Base: `http://127.0.0.1:8000`
+- Interactive Docs: `http://127.0.0.1:8000/docs`
+
+---
+
+### 2. Frontend (React + Vite)
+
+```powershell
+# Navigate to frontend directory
 cd heatguard-frontend
 
-# 2. Install dependencies
+# Install dependencies
 npm install
-```
 
-### Environment Configuration
-
-The frontend works out of the box with the default backend URL (`http://127.0.0.1:8000`) or offline mock simulation. To customize the backend endpoint, create a `.env` file from `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Set your backend URL:
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-### Running Locally
-
-```bash
-# Start Vite development server
+# Start development server
 npm run dev
 ```
+- Local URL: `http://localhost:5173` (or `http://localhost:8080`)
 
-Visit `http://localhost:5173` in your browser.
+---
 
-### Production Build
+## ⚙️ Environment Configuration
 
-```bash
-# Build optimized production bundle
-npm run build
+### Frontend (`heatguard-frontend/.env`)
+```env
+# Point to your local server or production Render backend:
+VITE_API_BASE_URL=https://heatgaurd-backend.onrender.com
+```
 
-# Preview production build locally
-npm run preview
+### Backend Environment Variables (`Render Dashboard`)
+```env
+# Allow Vercel frontend domains to call the API:
+FRONTEND_ORIGINS=*
+PYTHON_VERSION=3.12.8
 ```
 
 ---
 
-## 📡 Backend Integration
+## 📡 API Endpoints Reference
 
-The frontend connects to a FastAPI machine learning service. Expected endpoints:
-
-- `GET /api/health` - Service liveness status (`{"status": "ok"}`).
-- `GET /api/predict?latitude={lat}&longitude={lon}` - Returns 7-day maximum/mean temperatures, WBGT indices, heatwave flags, timing windows, and rainfall forecasts.
-
-*Note: If the backend is not running, HeatGuard automatically activates its offline simulation mode for Delhi coordinates so you can evaluate all features without a local Python server.*
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Health-check endpoint returning `{"status": "ok"}`. |
+| `GET` | `/api/predict?latitude={lat}&longitude={lon}` | Returns 7-day meteorological metrics, WBGT maximum/mean, heatwave flags, timing windows, and risk classification. |
 
 ---
 
